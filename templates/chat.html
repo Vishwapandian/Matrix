@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Dynamics Chat Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 800px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+
+        .clear-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.human {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.human .message-content {
+            background: #4f46e5;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai .message-content {
+            background: white;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .actor-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #6b7280;
+        }
+
+        .message.human .actor-label {
+            text-align: right;
+            color: #4f46e5;
+        }
+
+        .actor-alvin .actor-label { color: #ef4444; }
+        .actor-simon .actor-label { color: #10b981; }
+        .actor-theodore .actor-label { color: #f59e0b; }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .message-input:focus {
+            border-color: #4f46e5;
+        }
+
+        .send-btn {
+            padding: 12px 24px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: #4338ca;
+        }
+
+        .send-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 8px 16px;
+            color: #6b7280;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: #10b981;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .status-indicator.error {
+            background: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🎭 Social Dynamics Chat Simulator</h1>
+            <button class="clear-btn" onclick="clearChat()">Clear Chat</button>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will be dynamically added here -->
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            AI actors are thinking...
+        </div>
+        
+        <div class="chat-input">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    class="message-input" 
+                    id="messageInput" 
+                    placeholder="Type your message here..."
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-indicator" id="statusIndicator"></div>
+
+    <script>
+        let isWaitingForResponse = false;
+
+        // Load messages when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMessages();
+            setInterval(loadMessages, 1500); // Poll for new messages every 1.5 seconds
+        });
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isWaitingForResponse) {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const message = input.value.trim();
+            
+            if (!message || isWaitingForResponse) return;
+
+            // Disable input while waiting
+            isWaitingForResponse = true;
+            input.disabled = true;
+            sendBtn.disabled = true;
+            document.getElementById('typingIndicator').style.display = 'block';
+
+            try {
+                const response = await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: message })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    showStatus('Message sent!', false);
+                    loadMessages(); // Refresh messages immediately
+                } else {
+                    const error = await response.json();
+                    showStatus(error.error || 'Failed to send message', true);
+                }
+            } catch (error) {
+                showStatus('Network error', true);
+            } finally {
+                // Re-enable input after a delay to allow AI responses
+                setTimeout(() => {
+                    isWaitingForResponse = false;
+                    input.disabled = false;
+                    sendBtn.disabled = false;
+                    document.getElementById('typingIndicator').style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const messages = await response.json();
+                displayMessages(messages);
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+            }
+        }
+
+        let lastMessageCount = 0;
+
+        function displayMessages(messages) {
+            const container = document.getElementById('chatMessages');
+            const wasAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 1;
+            
+            // Only update if there are new messages
+            if (messages.length === lastMessageCount) {
+                return;
+            }
+            
+            // If we have new messages, only add the new ones
+            if (messages.length > lastMessageCount) {
+                for (let i = lastMessageCount; i < messages.length; i++) {
+                    const message = messages[i];
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.actor === 'human' ? 'human' : 'ai'} actor-${message.actor}`;
+                    
+                    const actorName = message.actor === 'human' ? 'You' : 
+                                     message.actor.charAt(0).toUpperCase() + message.actor.slice(1);
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-content">
+                            <div class="actor-label">${actorName}</div>
+                            <div>${escapeHtml(message.text)}</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                }
+            } else {
+                // If messages were cleared or reduced, rebuild everything
+                container.innerHTML = '';
+                messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.actor === 'human' ? 'human' : 'ai'} actor-${message.actor}`;
+                    
+                    const actorName = message.actor === 'human' ? 'You' : 
+                                     message.actor.charAt(0).toUpperCase() + message.actor.slice(1);
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-content">
+                            <div class="actor-label">${actorName}</div>
+                            <div>${escapeHtml(message.text)}</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                });
+            }
+            
+            lastMessageCount = messages.length;
+            
+            // Auto-scroll to bottom if user was at bottom
+            if (wasAtBottom) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        async function clearChat() {
+            if (!confirm('Are you sure you want to clear the chat?')) return;
+
+            try {
+                const response = await fetch('/api/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    lastMessageCount = 0; // Reset message count
+                    loadMessages();
+                    showStatus('Chat cleared!', false);
+                } else {
+                    showStatus('Failed to clear chat', true);
+                }
+            } catch (error) {
+                showStatus('Network error', true);
+            }
+        }
+
+        function showStatus(message, isError) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.textContent = message;
+            indicator.className = `status-indicator ${isError ? 'error' : ''}`;
+            indicator.style.display = 'block';
+            
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html> 
