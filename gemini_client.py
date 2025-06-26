@@ -2,8 +2,7 @@ import os
 import requests
 from typing import Any, Dict, List, Optional
 
-#GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_API_KEY = "AIzaSyDZPtUp1UMlJu2qzpDm0fO2NPDeB1d9s9w"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise EnvironmentError("GEMINI_API_KEY environment variable not set.")
 

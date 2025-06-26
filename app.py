@@ -5,6 +5,9 @@ import threading
 import time
 from typing import Dict, List
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, request, jsonify
 
 from gemini_client import generate_content

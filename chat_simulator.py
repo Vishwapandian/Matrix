@@ -16,6 +16,9 @@ import json
 import time
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from gemini_client import generate_content
 
 # ---------------------------------------------------------------------------
