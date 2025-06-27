@@ -1,17 +1,7 @@
-import os
 import requests
 from typing import Any, Dict, List, Optional
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise EnvironmentError("GEMINI_API_KEY environment variable not set.")
-
-GEMINI_ENDPOINT_TEMPLATE = (
-    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-)
-
-# Default model to use
-DEFAULT_MODEL = "gemini-2.0-flash"
+from config import GEMINI_API_KEY, GEMINI_ENDPOINT_TEMPLATE, DEFAULT_MODEL
 
 
 def generate_content(
@@ -34,6 +24,8 @@ def generate_content(
     Returns:
         Parsed JSON response from the API.
     """
+    if not GEMINI_API_KEY:
+        raise EnvironmentError("GEMINI_API_KEY is not set in the configuration.")
 
     url = GEMINI_ENDPOINT_TEMPLATE.format(model=model, key=GEMINI_API_KEY)
     headers = {"Content-Type": "application/json"}
@@ -56,4 +48,4 @@ def generate_content(
     return response.json()
 
 
-__all__ = ["generate_content", "DEFAULT_MODEL"] 
+__all__ = ["generate_content"] 

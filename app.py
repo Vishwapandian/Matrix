@@ -11,17 +11,12 @@ load_dotenv()
 from flask import Flask, render_template, request, jsonify
 
 from gemini_client import generate_content
+from config import MANAGER_DELAY_SEC, MAX_MANAGER_CYCLES
+from prompts import AI_ACTORS
 
 # Import chat logic from the simulator
 from chat_simulator import (
-    AI_ACTORS,
-    MANAGER_SYSTEM_PROMPT,
-    MANAGER_FUNCTION_NAME,
-    MANAGER_FUNCTION_DECLARATION,
-    MANAGER_DELAY_SEC,
-    MAX_MANAGER_CYCLES,
     ChatMessage,
-    render_chat,
     call_conversation_manager,
     call_ai_actor,
 )
@@ -52,11 +47,17 @@ def trigger_manager_cycle():
             break  # Manager elected no one to speak now
         
         for actor_id in next_actors:
-            reply = call_ai_actor(actor_id, current_chat)
+            with chat_lock:
+                # Ensure the actor is valid before calling the AI
+                if actor_id not in AI_ACTORS:
+                    continue
+                # Make a copy of chat history for the call
+                current_chat_for_actor = chat_history.copy()
+
+            reply = call_ai_actor(actor_id, current_chat_for_actor)
             
             with chat_lock:
                 chat_history.append({"actor": actor_id, "text": reply})
-                current_chat = chat_history.copy()
         
         # Delay before manager checks again
         time.sleep(MANAGER_DELAY_SEC)

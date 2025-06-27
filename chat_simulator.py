@@ -20,52 +20,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from gemini_client import generate_content
+from config import MANAGER_DELAY_SEC, MAX_MANAGER_CYCLES
+from prompts import (
+    AI_ACTORS,
+    MANAGER_SYSTEM_PROMPT,
+    MANAGER_FUNCTION_NAME,
+    MANAGER_FUNCTION_DECLARATION,
+)
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-
-AI_ACTORS: Dict[str, str] = {
-    "alvin": "You are Alvin from Alvin and the Chipmunks",
-    "simon": "You are Simon from Alvin and the Chipmunks",
-    "theodore": "You are Theodore from Alvin and the Chipmunks",
-}
-
-MANAGER_SYSTEM_PROMPT = (
-    "You are the conversation manager, you will call the appropriate person to "
-    "talk based on the chat state. Return a function call selecting which AI "
-    "actors should respond. If no one should respond, return an empty list."
-)
-
-# Name of the custom tool the manager should invoke via function calling.
-MANAGER_FUNCTION_NAME = "select_actors"
-
-# Function declaration passed to Gemini for the manager call.
-MANAGER_FUNCTION_DECLARATION = {
-    "name": MANAGER_FUNCTION_NAME,
-    "description": "Select which AI actors should speak next based on the current chat state.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "actors": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "enum": list(AI_ACTORS.keys()),
-                },
-                "description": "List of actor IDs that should speak next."
-            }
-        },
-        "required": ["actors"],
-    },
-}
-
-# Delay (in seconds) between a chat update and the manager being triggered.
-MANAGER_DELAY_SEC = 5
-
-# Maximum number of manager cycles triggered automatically after each user
-# message (to avoid infinite loops in pathological scenarios).
-MAX_MANAGER_CYCLES = 10
 
 
 # ---------------------------------------------------------------------------
