@@ -9,6 +9,7 @@ def generate_content(
     user_content: str,
     system_instruction: Optional[str] = None,
     tools: Optional[List[Dict[str, Any]]] = None,
+    tool_config: Optional[Dict[str, Any]] = None,
     model: str = DEFAULT_MODEL,
     generation_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
@@ -18,6 +19,7 @@ def generate_content(
         user_content: Text content representing the prompt or conversation context.
         system_instruction: Optional system-level instruction for the model.
         tools: Optional list of tool/function declarations (for function calling).
+        tool_config: Optional tool configuration, e.g. to force a tool call.
         model: Name of the Gemini model to use.
         generation_config: Optional generation configuration dict.
 
@@ -39,6 +41,9 @@ def generate_content(
 
     if tools is not None:
         payload["tools"] = tools
+
+    if tool_config is not None:
+        payload["tool_config"] = tool_config
 
     if generation_config is not None:
         payload["generationConfig"] = generation_config

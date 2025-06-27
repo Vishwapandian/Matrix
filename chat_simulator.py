@@ -6,7 +6,7 @@ Usage:
 
 The script will prompt the human user to send messages into the chat. Each user
 message triggers the conversation manager (after a 5-second delay). The manager
-selects which AI actors (Alvin, Simon, Theodore) should respond. The simulator
+selects which AI actors (Evie, Auri, Puck) should respond. The simulator
 calls the Gemini model separately for each selected actor, rotating the system
 prompt to match the actor being simulated. Responses are appended to chat and
 printed to the console. The cycle repeats automatically.
@@ -14,7 +14,7 @@ printed to the console. The cycle repeats automatically.
 
 import json
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypedDict
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -27,6 +27,7 @@ from prompts import (
     MANAGER_FUNCTION_NAME,
     MANAGER_FUNCTION_DECLARATION,
 )
+from tools import ChatMessage, render_chat, call_ai_actor
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -34,28 +35,16 @@ from prompts import (
 
 
 # ---------------------------------------------------------------------------
-# Chat State Helpers
-# ---------------------------------------------------------------------------
-
-ChatMessage = Dict[str, str]  # {"actor": str, "text": str}
-
-
-def render_chat(chat: List[ChatMessage]) -> str:
-    """Render chat history as plain text lines for model context."""
-    return "\n".join(f"{m['actor']}: {m['text']}" for m in chat)
-
-
-# ---------------------------------------------------------------------------
 # Conversation Manager Logic
 # ---------------------------------------------------------------------------
 
-def call_conversation_manager(chat: List[ChatMessage]) -> List[str]:
+def call_conversation_manager(chat_history: List[ChatMessage]) -> List[str]:
     """Invoke Gemini as the conversation manager to select next AI actors.
 
     Returns a list of actor IDs (subset of AI_ACTORS keys) that should reply
     next. The list can be empty if no actor should speak.
     """
-    chat_context = render_chat(chat)
+    chat_context = render_chat(chat_history)
 
     response = generate_content(
         user_content=chat_context,
@@ -70,7 +59,7 @@ def call_conversation_manager(chat: List[ChatMessage]) -> List[str]:
         return []
 
     # Expecting a function call.
-    function_call = candidate.get("functionCall")  # type: ignore[arg-type]
+    function_call = candidate.get("functionCall")
     if not function_call:
         print("[Manager] No function call detected; defaulting to no actors.")
         return []
@@ -79,40 +68,11 @@ def call_conversation_manager(chat: List[ChatMessage]) -> List[str]:
         print(f"[Manager] Unexpected function call: {function_call.get('name')}")
         return []
 
-    args_raw = function_call.get("args")
-    try:
-        args = json.loads(args_raw) if isinstance(args_raw, str) else args_raw
-        actors = args.get("actors", []) if isinstance(args, dict) else []
-    except json.JSONDecodeError:
-        print("[Manager] Failed to parse function call args; defaulting to no actors.")
-        return []
-
+    args = function_call.get("args", {})
+    actors = args.get("actors", [])
+    
     # Filter to known actor IDs and deduplicate.
     return [a for a in dict.fromkeys(actors) if a in AI_ACTORS]
-
-
-# ---------------------------------------------------------------------------
-# AI Actor Logic
-# ---------------------------------------------------------------------------
-
-def call_ai_actor(actor_id: str, chat: List[ChatMessage]) -> str:
-    """Invoke Gemini pretending to be a specific AI actor to generate a reply."""
-    system_instruction = AI_ACTORS[actor_id]
-    chat_context = render_chat(chat)
-
-    response = generate_content(
-        user_content=chat_context,
-        system_instruction=system_instruction,
-    )
-
-    try:
-        # Extract first candidate text.
-        parts = response["candidates"][0]["content"]["parts"]
-        # Concatenate all text parts.
-        text = " ".join(p.get("text", "") for p in parts if "text" in p).strip()
-        return text
-    except (KeyError, IndexError):
-        return "(Error: actor response unavailable)"
 
 
 # ---------------------------------------------------------------------------
@@ -145,9 +105,10 @@ def main() -> None:
                 break  # Manager elected no one to speak now.
 
             for actor_id in next_actors:
-                reply = call_ai_actor(actor_id, chat_history)
-                chat_history.append({"actor": actor_id, "text": reply})
-                print(f"{actor_id.capitalize()}: {reply}\n")
+                replies = call_ai_actor(actor_id, chat_history)
+                for reply in replies:
+                    chat_history.append({"actor": actor_id, "text": reply})
+                    print(f"{actor_id.capitalize()}: {reply}\n")
 
             # Delay before manager checks again.
             time.sleep(MANAGER_DELAY_SEC)

@@ -16,10 +16,9 @@ from prompts import AI_ACTORS
 
 # Import chat logic from the simulator
 from chat_simulator import (
-    ChatMessage,
     call_conversation_manager,
-    call_ai_actor,
 )
+from tools import ChatMessage, call_ai_actor
 
 app = Flask(__name__)
 
@@ -54,10 +53,11 @@ def trigger_manager_cycle():
                 # Make a copy of chat history for the call
                 current_chat_for_actor = chat_history.copy()
 
-            reply = call_ai_actor(actor_id, current_chat_for_actor)
+            replies = call_ai_actor(actor_id, current_chat_for_actor)
             
             with chat_lock:
-                chat_history.append({"actor": actor_id, "text": reply})
+                for reply in replies:
+                    chat_history.append({"actor": actor_id, "text": reply})
         
         # Delay before manager checks again
         time.sleep(MANAGER_DELAY_SEC)
